@@ -133,8 +133,7 @@ app.post("/cluster", async (req, res) => {
 });
 
 app.post("/abstract", async (req, res) => {
-  const { text, pii } = req.body.message;
-  const userMessage = `Text: ${text}\nProtected information: ${pii}`;
+  const userMessage = req.body.message;
 
   try {
     console.log("Waiting for ABSTRACT response...");
