@@ -2,9 +2,12 @@ const express = require("express");
 const bodyParser = require("body-parser");
 const cors = require("cors");
 const { default: ollama } = require("ollama");
+const https = require('https');
+const fs = require('fs');
 
 const app = express();
-const port = 3000;
+const httpPort = 3000;
+const httpsPort = 3443;
 app.use(cors());
 app.use(bodyParser.json());
 
@@ -153,11 +156,21 @@ app.post("/abstract", async (req, res) => {
   }
 });
 
-app.listen(port, () => {
-  console.log(`Server running at http://localhost:${port}`);
+const httpsOptions = {
+  key: fs.readFileSync('selfsigned.key'),
+  cert: fs.readFileSync('selfsigned.crt')
+};
+
+https.createServer(httpsOptions, app).listen(httpsPort, () => {
+  console.log(`HTTPS Server running at https://34.23.212.219:${httpsPort}`);
+});
+
+app.listen(httpPort, "0.0.0.0", () => {
+  console.log(`HTTP Server running at http://localhost:${httpPort}`);
 });
 
 app.get("/", async (req, res) => {
+  console.log ("Get request received!")
   res.send("HI");
 });
 
