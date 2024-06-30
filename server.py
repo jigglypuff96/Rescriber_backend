@@ -1,6 +1,11 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS  
 import ollama
+import json
+import numpy as np
+from datetime import datetime
+from scipy.spatial.distance import cosine
+import pandas as pd
 
 app = Flask(__name__)
 CORS(app) 
@@ -64,6 +69,7 @@ models = {
     }
 }
 
+
 def pull_model(model_name):
     try:
         ollama.pull(model_name)
@@ -83,6 +89,39 @@ def create_model(model_key):
     except ollama.ResponseError as e:
         print(f"Failed to create the model: {e}")
 
+from nltk.tokenize import word_tokenize, sent_tokenize
+import nltk
+from nltk.corpus import wordnet as wn
+from nltk.tag import pos_tag
+from nltk.chunk import ne_chunk
+
+
+# Ensure you have the necessary NLTK data
+nltk.download('wordnet')
+nltk.download('punkt')
+nltk.download('averaged_perceptron_tagger')
+nltk.download('maxent_ne_chunker')
+nltk.download('words')
+
+
+
+def extract_entities(nltk_tree):
+    entities = []
+    for subtree in nltk_tree:
+        if isinstance(subtree, nltk.Tree):
+            entity_type = subtree.label()
+            entity = " ".join([word for word, pos in subtree.leaves()])
+            entities.append({"entity_type": entity_type, "text": entity})
+    return entities
+
+def get_embedding(name):
+    start_time = datetime.now()
+    embedding = ollama.embeddings(model='llama3', prompt=name)
+    end_time = datetime.now()
+    duration = (end_time - start_time).total_seconds()
+    return embedding, duration
+
+
 @app.route('/detect', methods=['POST'])
 def detect():
     user_message = request.json.get('message')
@@ -92,7 +131,7 @@ def detect():
             model=models["detect"]["modelName"],
             messages=[{'role': 'user', 'content': user_message}],
             stream=True,
-            format ="json"
+            format="json"
         )
         results = []
         for chunk in response:
@@ -101,44 +140,68 @@ def detect():
     except ollama.ResponseError as e:
         print("Error running Ollama:", e)
         return jsonify({"error": "Error running Ollama", "details": str(e)}), 500
+
+@app.route('/nltk-ner', methods=['POST'])
+def nltk_ner():
+    global nltk_entities
+    user_message = request.json.get('message')
+    try:
+        # Tokenize the text
+        words = word_tokenize(user_message)
+        
+        # POS tagging
+        pos_tags = pos_tag(words)
+        
+        # Named Entity Recognition
+        named_entities = ne_chunk(pos_tags)
+        
+        # Extract entities
+        nltk_entities = extract_entities(named_entities)
+        
+        return jsonify({"results": nltk_entities})
+    except Exception as e:
+        print("Error running NLTK NER:", e)
+        return jsonify({"error": "Error running NLTK NER", "details": str(e)}), 500
+
+@app.route('/generate-embeddings', methods=['POST'])
+def generate_embeddings():
+    global nltk_entities
+    try:
+        if not nltk_entities:
+            return jsonify({"error": "No NLTK entities found. Please run the NER endpoint first."}), 400
+        
+        embedding_data = []
+        
+        for entity in nltk_entities:
+            name = entity['text']
+            embedding, query_time = get_embedding(name)
+            embedding_data.append({
+                "name": name,
+                "embedding": embedding,
+                "query_time": query_time
+            })
+        
+
+        df = pd.DataFrame(embedding_data)
+        output_path = "entity_embeddings.csv"
+        df.to_csv(output_path, index=False)
+        
+        return jsonify({"message": f"Embeddings saved to {output_path}"})
+    except Exception as e:
+        print("Error generating embeddings:", e)
+        return jsonify({"error": "Error generating embeddings", "details": str(e)}), 500
 
 @app.route('/cluster', methods=['POST'])
 def cluster():
     user_message = request.json.get('message')
     try:
-        print("Waiting for CLUSTER response...")
-        response = ollama.chat(
-            model=models["cluster"]["modelName"],
-            messages=[{'role': 'user', 'content': user_message}],
-            stream=True,
-            format ="json"
-        )
-        results = []
-        for chunk in response:
-            results.append(chunk['message']['content'])
-        return jsonify({"results": ''.join(results)})
-    except ollama.ResponseError as e:
-        print("Error running Ollama:", e)
-        return jsonify({"error": "Error running Ollama", "details": str(e)}), 500
-
-@app.route('/abstract', methods=['POST'])
-def abstract():
-    user_message = request.json.get('message')
-    try:
-        print("Waiting for ABSTRACT response...")
-        response = ollama.chat(
-            model=models["abstract"]["modelName"],
-            messages=[{'role': 'user', 'content': user_message}],
-            stream=True,
-            format ="json"
-        )
-        results = []
-        for chunk in response:
-            results.append(chunk['message']['content'])
-        return jsonify({"results": ''.join(results)})
-    except ollama.ResponseError as e:
-        print("Error running Ollama:", e)
-        return jsonify({"error": "Error running Ollama", "details": str(e)}), 500
+        print("Performing clustering...")
+        embeddings = np.array(json.loads(user_message))
+        labels = perform_clustering(embeddings)
+        return jsonify({"results": labels.tolist()})
+    except Exception as e:
+        print("Error performing clustering:", e)
+        return jsonify({"error": "Error performing clustering", "details": str(e)}), 500
 
 @app.route('/', methods=['GET'])
 def home():
