@@ -6,6 +6,7 @@ import numpy as np
 from datetime import datetime
 from scipy.spatial.distance import cosine
 import pandas as pd
+from itertools import combinations
 
 app = Flask(__name__)
 CORS(app) 
@@ -182,12 +183,22 @@ class UnionFind:
             self.rank[item] = 0
 
 def ufcluster(nltk_entities, csv_path='entity_embeddings.csv'):
+    pairs=[]
 
-
-    df = pd.read_csv(csv_path)
-    embeddings = np.array([extract_embedding(embedding) for embedding in df['embedding']])
-
-    pairs = create_union_set(df)
+    entity_types_count = len(set([entity['entity_type'] for entity in nltk_entities]))
+    if entity_types_count <= 2 and len(nltk_entities) < 20:
+        pairs.extend(list(combinations([entity['text'] for entity in nltk_entities], 2)))
+    else:   
+        df = pd.read_csv(csv_path)
+        # embeddings = np.array([extract_embedding(embedding) for embedding in df['embedding']])
+        pairs = create_union_set(df)
+        
+    if 2< entity_types_count < 5 and len(nltk_entities) < 100:
+        additional_pairs = list(combinations([entity['text'] for entity in nltk_entities], 2))
+        print("Additional pairs based on conditions:")
+        print(additional_pairs)
+        pairs.extend(additional_pairs)
+    
     print(pairs)
 
 
@@ -197,6 +208,8 @@ def ufcluster(nltk_entities, csv_path='entity_embeddings.csv'):
 
     for pair in pairs:
         items = list(pair) 
+        print("here")
+        print(items)
         if is_valid_pair(items[0], items[1]):
             valid_pairs.append(items) 
             print("valid items",items)  
