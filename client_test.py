@@ -3,13 +3,24 @@ import threading
 import json
 import pandas as pd
 import os
+from datetime import datetime
+import csv
+
+# 记录开始时间
+start_time = datetime.now()
 
 base_url = "http://localhost:3000"
 entities = []
 merge_clustering_response = {}
 entities_lock = threading.Lock()
-clustering_lock = threading.Lock()
+clustering_lock = threading.Lock() 
 
+tNLTK = []
+record = []
+tclusteruf = []
+tmergedentities = []
+fcluster = []
+fmergedcluster =[]
 def post_request(endpoint, data):
     url = f"{base_url}/{endpoint}"
     response = requests.post(url, json=data)
@@ -23,6 +34,13 @@ def normalize_entities(results):
     """Normalize the entities format to a list of dictionaries."""
     print("clean entities")
     print(results)
+    if not tNLTK:
+        time1 = datetime.now()
+        diff1 = time1 - start_time
+        tNLTK.append(results)
+        record.append(f"time1 {diff1}" )
+        record.append(results)
+
     if isinstance(results, str):
         try:
             results = json.loads(results)
@@ -77,14 +95,23 @@ def cluster_uf():
             else:
                 merge_clustering_response[key] = value
         merge_clustering_response_updated()
+        if not tclusteruf:
+            tclusteruf.append(merge_clustering_response)
+            time2 = datetime.now()
+            diff2 = time2-start_time
+            record.append(f"time1 {diff2}" )
+            record.append(tclusteruf)
 
 def cluster(user_message):
     global merge_clustering_response
+    global fcluster
     print("Clustering...")
     response = post_request('cluster', {'message': user_message})
     print("Cluster Response:", response)
     with clustering_lock:
         cluster_results = json.loads(response.get('results', '{}'))
+        fcluster = []
+        fcluster.append(cluster_results)
         for key, value in cluster_results.items():
             if len(value)>4:
                 continue
@@ -98,10 +125,13 @@ def cluster(user_message):
         merge_clustering_response_updated()
 
 def merge_clustering_response_updated():
+    global fmergedcluster
     print("Merged Clustering Response:", merge_clustering_response)
     # Update the global variable on the server
     response = post_request('update-cluster-results', {'results': merge_clustering_response})
     print("Update Clustering Response:", response)
+    fmergedcluster= []
+    fmergedcluster.append(response)
 
 def merge_entities_results():
     global entities
@@ -128,6 +158,26 @@ def main(user_message):
 
     print("Merging results from detect and nltk_ner.")
     merge_entities_results()
+    time3 = datetime.now()
+    diff3 = time3-start_time
+    record.append(f"time3 {diff3}" )
+    # tmergedentities.append(entities)
+    record.append(entities)
+    
+    time4 = datetime.now()
+    diff4 = time4-start_time
+    record.append(f"time4 {diff4}")
+    record.append(fcluster)
+    record.append(fmergedcluster)
+    with open('record.csv', 'a', newline='') as csvfile:
+        csvwriter = csv.writer(csvfile)
+        csvwriter.writerow(record)
+
+    print("Record appended successfully.")
+    
+    
+
+    
 
 if __name__ == "__main__":
     user_message = """I will be the valedictorian of my class. Please write me a presentation based on the following information: As a student at Vanderbilt University, I feel honored. The educational journey at Vandy has been nothing less than enlightening. The dedicated professors here at Vanderbilt are the best. As an 18 year old student at VU, the opportunities are endless."""
