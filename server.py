@@ -185,15 +185,17 @@ class UnionFind:
 def ufcluster(nltk_entities, csv_path='entity_embeddings.csv'):
     pairs=[]
 
+    #change if-else logic and threshold
+
     entity_types_count = len(set([entity['entity_type'] for entity in nltk_entities]))
     if entity_types_count <= 2 and len(nltk_entities) < 20:
         pairs.extend(list(combinations([entity['text'] for entity in nltk_entities], 2)))
     else:   
         df = pd.read_csv(csv_path)
         # embeddings = np.array([extract_embedding(embedding) for embedding in df['embedding']])
-        pairs = create_union_set(df)
+        pairs.extend(list(create_union_set(df)))
         
-    if 2< entity_types_count < 5 and len(nltk_entities) < 100:
+    if 1< entity_types_count < 5 and len(nltk_entities) < 100:
         additional_pairs = list(combinations([entity['text'] for entity in nltk_entities], 2))
         print("Additional pairs based on conditions:")
         print(additional_pairs)
