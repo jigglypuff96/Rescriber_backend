@@ -99,7 +99,7 @@ def cluster_uf():
             tclusteruf.append(merge_clustering_response)
             time2 = datetime.now()
             diff2 = time2-start_time
-            record.append(f"time1 {diff2}" )
+            record.append(f"time2 {diff2}" )
             record.append(tclusteruf)
 
 def cluster(user_message):
@@ -180,10 +180,11 @@ def main(user_message):
     
 
 if __name__ == "__main__":
-    user_message = """I will be the valedictorian of my class. Please write me a presentation based on the following information: As a student at Vanderbilt University, I feel honored. The educational journey at Vandy has been nothing less than enlightening. The dedicated professors here at Vanderbilt are the best. As an 18 year old student at VU, the opportunities are endless."""
+    #user_message = """I will be the valedictorian of my class. Please write me a presentation based on the following information: As a student at Vanderbilt University, I feel honored. The educational journey at Vandy has been nothing less than enlightening. The dedicated professors here at Vanderbilt are the best. As an 18 year old student at VU, the opportunities are endless."""
 #     user_message ="""Here is the offer statistics for some students of the class of 2023:
 # North America: MIT, UCLA, University of California Berkeley, Harvard University, Stanford University, Massachusetts Institute of Technology, Princeton University, University of Chicago, University of Toronto, McGill University, University of California Los Angeles, UChi, CMU, Carnegie Mellon University, UCB, University of British Columbia
 # Canada: UBC
 # Europe: ETHZ, ETH Zurich, Oxford, University of Cambridge, Imperial College London, London School of Economics, LSE, IC
 # """
+    user_message = """My friend Julie and I are both 19 years old so can’t drink really even tho we are in Korea. How can I handle social situations where there might be pressure to drink"""
     main(user_message)
