@@ -89,6 +89,158 @@ def create_model(model_key):
     except ollama.ResponseError as e:
         print(f"Failed to create the model: {e}")
 
+def extract_embedding(embedding_dict_str):
+    try:
+        embedding_dict = eval(embedding_dict_str)
+        embedding = embedding_dict.get('embedding', [])
+        if isinstance(embedding, list) and all(isinstance(x, (int, float)) for x in embedding):
+            return embedding
+        else:
+            raise ValueError("Extracted embedding is not a list of numbers.")
+    except Exception as e:
+        raise ValueError(f"Error extracting embedding: {e}")
+
+def calculate_distance(embedding1, embedding2):
+    return cosine(embedding1, embedding2)
+
+def find_nearest_entity(df, input_entity):
+    input_embedding_str = df[df['name'] == input_entity]['embedding'].values[0]
+    input_embedding = extract_embedding(input_embedding_str)
+    
+    nearest_entity = None
+    nearest_distance = float('inf')
+    
+    for index, row in df.iterrows():
+        if row['name'] != input_entity:
+            entity_embedding_str = row['embedding']
+            entity_embedding = extract_embedding(entity_embedding_str)
+            distance = calculate_distance(input_embedding, entity_embedding)
+            if distance < nearest_distance:
+                nearest_distance = distance
+                nearest_entity = row['name']
+    return nearest_entity
+
+def create_union_set(df):
+    """
+# Often, it's necessary to find the nearest elements, but if there are only a few, it's actually not needed.
+# Nearest elements:
+#     {frozenset({'Vanderbilt University', 'Vanderbilt'}), frozenset({'Vandy', 'Vanderbilt'}), frozenset({'Vanderbilt', 'VU'})}
+# Valid items: ['Vanderbilt University', 'Vanderbilt']
+# NLTK NER response:
+#     {'results': [{'entity_type': 'ORGANIZATION', 'text': 'Vanderbilt University'},
+#                  {'entity_type': 'ORGANIZATION', 'text': 'Vandy'},
+#                  {'entity_type': 'ORGANIZATION', 'text': 'Vanderbilt'},
+#                  {'entity_type': 'ORGANIZATION', 'text': 'VU'}]}
+# It should directly form pairs.
+"""
+
+    union_set = set()
+    for input_entity in df['name']:
+        nearest_entity = find_nearest_entity(df, input_entity)
+        if nearest_entity:
+            union_set.add(frozenset([input_entity, nearest_entity]))
+    
+    return union_set
+
+def is_valid_pair(e1, e2):
+    if len(e1) > len(e2):
+        t1, t2 = e1, e2
+    else:
+        t1, t2 = e2, e1
+    
+    t1 = t1.lower()
+    t2 = t2.lower()
+    it = iter(t1)
+    return all(c in it for c in t2)
+
+class UnionFind:
+    def __init__(self):
+        self.parent = {}
+        self.rank = {}
+
+    def find(self, item):
+        if self.parent[item] != item:
+            self.parent[item] = self.find(self.parent[item])  
+        return self.parent[item]
+
+    def union(self, item1, item2):
+        root1 = self.find(item1)
+        root2 = self.find(item2)
+
+        if root1 != root2:
+            if self.rank[root1] > self.rank[root2]:
+                self.parent[root2] = root1
+            elif self.rank[root1] < self.rank[root2]:
+                self.parent[root1] = root2
+            else:
+                self.parent[root2] = root1
+                self.rank[root1] += 1
+
+    def add(self, item):
+        if item not in self.parent:
+            self.parent[item] = item
+            self.rank[item] = 0
+
+def ufcluster(nltk_entities, csv_path='entity_embeddings.csv'):
+
+
+    df = pd.read_csv(csv_path)
+    embeddings = np.array([extract_embedding(embedding) for embedding in df['embedding']])
+
+    pairs = create_union_set(df)
+    print(pairs)
+
+
+    
+    valid_pairs = [] 
+    invalid = []
+
+    for pair in pairs:
+        items = list(pair) 
+        if is_valid_pair(items[0], items[1]):
+            valid_pairs.append(items) 
+            print("valid items",items)  
+        else:
+            invalid.extend(items)
+            print("invalid",items)
+
+    uf = UnionFind()
+
+    for pair in valid_pairs:
+        items = list(pair)
+        uf.add(items[0])
+        uf.add(items[1])
+        uf.union(items[0], items[1])
+
+    for e in invalid:
+        uf.add(e)
+
+    union_sets = {}
+    for item in uf.parent:
+        root = uf.find(item)
+        if root not in union_sets:
+            union_sets[root] = []
+        union_sets[root].append(item)
+    
+    return union_sets
+
+@app.route('/clusteruf', methods=['POST'])
+def clusteruf():
+    global nltk_entities
+    try:
+        if not nltk_entities:
+            return jsonify({"error": "No NLTK entities found. Please run the NER endpoint first."}), 400
+
+        entities_text = [entity['text'] for entity in nltk_entities]
+        result = ufcluster(nltk_entities)
+        print("cluser2")
+        print(result)
+        return jsonify({"results": result})
+    except Exception as e:
+        print("Error processing clustering:", e)
+        return jsonify({"error": "Error processing clustering", "details": str(e)}), 500
+
+
 from nltk.tokenize import word_tokenize, sent_tokenize
 import nltk
 from nltk.corpus import wordnet as wn
@@ -191,17 +343,27 @@ def generate_embeddings():
         print("Error generating embeddings:", e)
         return jsonify({"error": "Error generating embeddings", "details": str(e)}), 500
 
+
 @app.route('/cluster', methods=['POST'])
 def cluster():
     user_message = request.json.get('message')
     try:
-        print("Performing clustering...")
-        embeddings = np.array(json.loads(user_message))
-        labels = perform_clustering(embeddings)
-        return jsonify({"results": labels.tolist()})
-    except Exception as e:
-        print("Error performing clustering:", e)
-        return jsonify({"error": "Error performing clustering", "details": str(e)}), 500
+        print("Waiting for CLUSTER response...")
+        response = ollama.chat(
+            model=models["cluster"]["modelName"],
+            messages=[{'role': 'user', 'content': user_message}],
+            stream=True,
+            format ="json"
+        )
+        results = []
+        for chunk in response:
+            results.append(chunk['message']['content'])
+        return jsonify({"results": ''.join(results)})
+    except ollama.ResponseError as e:
+        print("Error running Ollama:", e)
+        return jsonify({"error": "Error running Ollama", "details": str(e)}), 500
+
+
 
 @app.route('/', methods=['GET'])
 def home():
