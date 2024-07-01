@@ -238,7 +238,16 @@ def ufcluster(nltk_entities, csv_path='entity_embeddings.csv'):
             union_sets[root] = []
         union_sets[root].append(item)
     
-    return union_sets
+    result = {}
+    
+    for k,v in union_sets.items():
+        if len(v)>4:
+            continue
+        else:
+            result[k]=v
+
+    
+    return result
 
 @app.route('/update-entities', methods=['POST'])
 def update_entities():

@@ -67,7 +67,12 @@ def cluster_uf():
     with clustering_lock:
         uf_results = response.get('results', {})
         for key, value in uf_results.items():
+            if len(value)>4:
+                continue
+
             if key in merge_clustering_response:
+                if len(merge_clustering_response[key])>3:
+                    continue
                 merge_clustering_response[key] = list(set(merge_clustering_response[key] + value))
             else:
                 merge_clustering_response[key] = value
@@ -81,8 +86,13 @@ def cluster(user_message):
     with clustering_lock:
         cluster_results = json.loads(response.get('results', '{}'))
         for key, value in cluster_results.items():
+            if len(value)>4:
+                continue
             if key in merge_clustering_response:
-                merge_clustering_response[key] = list(set(merge_clustering_response[key] + value))
+                continue
+                # if len(merge_clustering_response[key])>3:
+                #     continue
+                # merge_clustering_response[key] = list(set(merge_clustering_response[key] + value))
             else:
                 merge_clustering_response[key] = value
         merge_clustering_response_updated()
@@ -121,4 +131,9 @@ def main(user_message):
 
 if __name__ == "__main__":
     user_message = """I will be the valedictorian of my class. Please write me a presentation based on the following information: As a student at Vanderbilt University, I feel honored. The educational journey at Vandy has been nothing less than enlightening. The dedicated professors here at Vanderbilt are the best. As an 18 year old student at VU, the opportunities are endless."""
+#     user_message ="""Here is the offer statistics for some students of the class of 2023:
+# North America: MIT, UCLA, University of California Berkeley, Harvard University, Stanford University, Massachusetts Institute of Technology, Princeton University, University of Chicago, University of Toronto, McGill University, University of California Los Angeles, UChi, CMU, Carnegie Mellon University, UCB, University of British Columbia
+# Canada: UBC
+# Europe: ETHZ, ETH Zurich, Oxford, University of Cambridge, Imperial College London, London School of Economics, LSE, IC
+# """
     main(user_message)
