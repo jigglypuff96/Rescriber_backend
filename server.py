@@ -389,6 +389,18 @@ def cluster():
         print("Error running Ollama:", e)
         return jsonify({"error": "Error running Ollama", "details": str(e)}), 500
 
+merge_clustering_response = {}
+
+@app.route('/update-cluster-results', methods=['POST'])
+def update_cluster_results():
+    global merge_clustering_response
+    new_results = request.json.get('results', {})
+    for key, value in new_results.items():
+        if key in merge_clustering_response:
+            merge_clustering_response[key] = list(set(merge_clustering_response[key] + value))
+        else:
+            merge_clustering_response[key] = value
+    return jsonify({"message": "Clustering results updated successfully", "merge_clustering_response": merge_clustering_response})
 
 
 @app.route('/', methods=['GET'])

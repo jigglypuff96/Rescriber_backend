@@ -6,16 +6,22 @@ import os
 
 base_url = "http://localhost:3000"
 entities = []
+merge_clustering_response = {}
 entities_lock = threading.Lock()
+clustering_lock = threading.Lock()
 
 def post_request(endpoint, data):
     url = f"{base_url}/{endpoint}"
     response = requests.post(url, json=data)
-    return response.json()
+    try:
+        return response.json()
+    except ValueError:
+        print(f"Error decoding JSON response from {endpoint}: {response.text}")
+        return {}
 
 def normalize_entities(results):
     """Normalize the entities format to a list of dictionaries."""
-    print("clean entites")
+    print("clean entities")
     print(results)
     if isinstance(results, str):
         try:
@@ -34,7 +40,7 @@ def detect_entities(user_message):
         normalized_results = normalize_entities(response.get('results', []))
         entities.extend(normalized_results)
         print("Entities updated from detect_entities.")
-        trigger_post_processing()
+        merge_entities_results()
 
 def nltk_ner(user_message):
     global entities
@@ -44,7 +50,7 @@ def nltk_ner(user_message):
         normalized_results = normalize_entities(response.get('results', []))
         entities.extend(normalized_results)
         print("Entities updated from nltk_ner.")
-        trigger_post_processing()
+        merge_entities_results()
 
 def generate_embeddings():
     global entities
@@ -54,59 +60,51 @@ def generate_embeddings():
     return response
 
 def cluster_uf():
+    global merge_clustering_response
     print("Clustering UF...")
     response = post_request('clusteruf', {})
     print("Cluster UF Response:", response)
-    return response
+    with clustering_lock:
+        uf_results = response.get('results', {})
+        for key, value in uf_results.items():
+            if key in merge_clustering_response:
+                merge_clustering_response[key] = list(set(merge_clustering_response[key] + value))
+            else:
+                merge_clustering_response[key] = value
+        merge_clustering_response_updated()
 
 def cluster(user_message):
+    global merge_clustering_response
     print("Clustering...")
     response = post_request('cluster', {'message': user_message})
     print("Cluster Response:", response)
-    return response
+    with clustering_lock:
+        cluster_results = json.loads(response.get('results', '{}'))
+        for key, value in cluster_results.items():
+            if key in merge_clustering_response:
+                merge_clustering_response[key] = list(set(merge_clustering_response[key] + value))
+            else:
+                merge_clustering_response[key] = value
+        merge_clustering_response_updated()
+
+def merge_clustering_response_updated():
+    print("Merged Clustering Response:", merge_clustering_response)
+    # Update the global variable on the server
+    response = post_request('update-cluster-results', {'results': merge_clustering_response})
+    print("Update Clustering Response:", response)
+
+def merge_entities_results():
+    global entities
+    print("Merged Entities:", entities)
+    response = post_request('update-entities', {'entities': entities})
+    print("Update Entities Response:", response)
+    trigger_post_processing()
 
 def trigger_post_processing():
     print("Trigger post processing")
     generate_embeddings()
     cluster_uf()
     cluster(user_message)
-
-def merge_entities_results():
-    # merging is effectively done during the extend operations in the detect_entities and nltk_ner functions, then the merge_results function is unnecessary. We can directly proceed with the post-processing after both threads complete.
-    global entities
-    # merged_entities = {}
-    # for entity in entities:
-    #     entity_type = entity['entity_type']
-    #     text = entity['text']
-    #     if entity_type in merged_entities:
-    #         if text not in merged_entities[entity_type]:
-    #             merged_entities[entity_type].append(text)
-    #     else:
-    #         merged_entities[entity_type] = [text]
-    # entities.clear()
-    # for entity_type, texts in merged_entities.items():
-    #     for text in texts:
-    #         entities.append({'entity_type': entity_type, 'text': text})
-    print("Merged Entities:", entities)
-    response = post_request('update-entities', {'entities': entities})
-    print("Update Entities Response:", response)
-    trigger_post_processing()
-    #Note: server only cal nltk_entities, need change
-
-def save_entities_to_csv():
-    global entities
-    df = pd.DataFrame(entities)
-    output_path = "entity_embeddings.csv"
-    df.to_csv(output_path, index=False)
-    print(f"Entities saved to {output_path}")
-    return output_path
-
-def delete_csv(file_path):
-    if os.path.exists(file_path):
-        os.remove(file_path)
-        print(f"{file_path} deleted.")
-    else:
-        print(f"{file_path} does not exist.")
 
 def main(user_message):
     detect_thread = threading.Thread(target=detect_entities, args=(user_message,))
@@ -121,14 +119,6 @@ def main(user_message):
     print("Merging results from detect and nltk_ner.")
     merge_entities_results()
 
-
-    # Note: create at server, send post to delete csv in server
-    # csv_path = save_entities_to_csv() 
-    # Perform additional operations with the CSV if needed
-    # delete_csv(csv_path)
-
 if __name__ == "__main__":
     user_message = """I will be the valedictorian of my class. Please write me a presentation based on the following information: As a student at Vanderbilt University, I feel honored. The educational journey at Vandy has been nothing less than enlightening. The dedicated professors here at Vanderbilt are the best. As an 18 year old student at VU, the opportunities are endless."""
     main(user_message)
-
-
