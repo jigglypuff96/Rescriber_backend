@@ -1,11 +1,11 @@
 import requests
 import threading
-from time import sleep
+import json
+import pandas as pd
+import os
 
 base_url = "http://localhost:3000"
 entities = []
-
-# Lock to manage access to the shared `entities` variable
 entities_lock = threading.Lock()
 
 def post_request(endpoint, data):
@@ -13,12 +13,26 @@ def post_request(endpoint, data):
     response = requests.post(url, json=data)
     return response.json()
 
+def normalize_entities(results):
+    """Normalize the entities format to a list of dictionaries."""
+    print("clean entites")
+    print(results)
+    if isinstance(results, str):
+        try:
+            results = json.loads(results)
+            if 'results' in results:
+                return results['results']
+        except json.JSONDecodeError as e:
+            print(f"Error decoding JSON: {e}")
+    return results
+
 def detect_entities(user_message):
     global entities
     response = post_request('detect', {'message': user_message})
     print("Detect Response:", response)
     with entities_lock:
-        entities.extend(response.get('results', []))
+        normalized_results = normalize_entities(response.get('results', []))
+        entities.extend(normalized_results)
         print("Entities updated from detect_entities.")
         trigger_post_processing()
 
@@ -27,7 +41,8 @@ def nltk_ner(user_message):
     response = post_request('nltk-ner', {'message': user_message})
     print("NLTK NER Response:", response)
     with entities_lock:
-        entities.extend(response.get('results', []))
+        normalized_results = normalize_entities(response.get('results', []))
+        entities.extend(normalized_results)
         print("Entities updated from nltk_ner.")
         trigger_post_processing()
 
@@ -51,14 +66,49 @@ def cluster(user_message):
     return response
 
 def trigger_post_processing():
-    # Trigger the post-processing steps when entities are updated
-    print("trigger post processing")
+    print("Trigger post processing")
     generate_embeddings()
     cluster_uf()
     cluster(user_message)
 
+def merge_entities_results():
+    # merging is effectively done during the extend operations in the detect_entities and nltk_ner functions, then the merge_results function is unnecessary. We can directly proceed with the post-processing after both threads complete.
+    global entities
+    # merged_entities = {}
+    # for entity in entities:
+    #     entity_type = entity['entity_type']
+    #     text = entity['text']
+    #     if entity_type in merged_entities:
+    #         if text not in merged_entities[entity_type]:
+    #             merged_entities[entity_type].append(text)
+    #     else:
+    #         merged_entities[entity_type] = [text]
+    # entities.clear()
+    # for entity_type, texts in merged_entities.items():
+    #     for text in texts:
+    #         entities.append({'entity_type': entity_type, 'text': text})
+    print("Merged Entities:", entities)
+    response = post_request('update-entities', {'entities': entities})
+    print("Update Entities Response:", response)
+    trigger_post_processing()
+    #Note: server only cal nltk_entities, need change
+
+def save_entities_to_csv():
+    global entities
+    df = pd.DataFrame(entities)
+    output_path = "entity_embeddings.csv"
+    df.to_csv(output_path, index=False)
+    print(f"Entities saved to {output_path}")
+    return output_path
+
+def delete_csv(file_path):
+    if os.path.exists(file_path):
+        os.remove(file_path)
+        print(f"{file_path} deleted.")
+    else:
+        print(f"{file_path} does not exist.")
+
 def main(user_message):
-    # Start the detect and nltk_ner functions in separate threads
     detect_thread = threading.Thread(target=detect_entities, args=(user_message,))
     nltk_ner_thread = threading.Thread(target=nltk_ner, args=(user_message,))
 
@@ -68,36 +118,17 @@ def main(user_message):
     detect_thread.join()
     nltk_ner_thread.join()
 
-    # After both threads are done, notify that merging is complete
-    # Todo: merge
-    # Todo: manage csv create and delete
     print("Merging results from detect and nltk_ner.")
+    merge_entities_results()
 
 
+    # Note: create at server, send post to delete csv in server
+    # csv_path = save_entities_to_csv() 
+    # Perform additional operations with the CSV if needed
+    # delete_csv(csv_path)
 
 if __name__ == "__main__":
-    # user_message = "Vanderbilt University is located in Nashville. Vandy is a great place to study."
-    user_message= """I will be the valedictorian of my class. Please write me a presentation based on the following information: As a student at Vanderbilt University, I feel honored. The educational journey at Vandy has been nothing less than enlightening. The dedicated professors here at Vanderbilt are the best. As an 18 year old student at VU, the opportunities are endless."""
+    user_message = """I will be the valedictorian of my class. Please write me a presentation based on the following information: As a student at Vanderbilt University, I feel honored. The educational journey at Vandy has been nothing less than enlightening. The dedicated professors here at Vanderbilt are the best. As an 18 year old student at VU, the opportunities are endless."""
     main(user_message)
 
 
-# output:
-# NLTK NER Response: {'results': [{'entity_type': 'ORGANIZATION', 'text': 'Vanderbilt University'}, {'entity_type': 'ORGANIZATION', 'text': 'Vandy'}, {'entity_type': 'ORGANIZATION', 'text': 'Vanderbilt'}, {'entity_type': 'ORGANIZATION', 'text': 'VU'}]}
-# Entities updated from nltk_ner.
-# trigger post processing
-# Generating embeddings...
-# Detect Response: {'results': '{ "results": [{"entity_type": "EDUCATIONAL_RECORD", "text": "I will be the valedictorian of my class."}, {"entity_type": "AFFILIATION", "text": "Vanderbilt University"}, {"entity_type": "AFFILIATION", "text": "VU"}] }'}
-# Generate Embeddings Response: {'message': 'Embeddings saved to entity_embeddings.csv'}
-# Clustering UF...
-# Cluster UF Response: {'results': {'Vanderbilt University': ['Vanderbilt University', 'Vandy', 'Vanderbilt', 'VU']}}
-# Clustering...
-# Cluster Response: {'results': '{\n    "Vanderbilt University": ["Vanderbilt University", "Vandy", "VU", "Vanderbilt"],\n    "18 year old": ["18 year old"]\n}'}
-# Entities updated from detect_entities.
-# trigger post processing
-# Generating embeddings...
-# Generate Embeddings Response: {'message': 'Embeddings saved to entity_embeddings.csv'}
-# Clustering UF...
-# Cluster UF Response: {'results': {'Vanderbilt University': ['Vanderbilt University', 'Vandy', 'Vanderbilt', 'VU']}}
-# Clustering...
-# Cluster Response: {'results': '{\n"Vanderbilt University": ["Vanderbilt University", "Vandy", "VU", "Vanderbilt"],\n"18 year old": ["18 year old"],\n"VU": ["VU", "Vanderbilt University", "Vandy", "Vanderbilt"]\n}'}
-# Merging results from detect and nltk_ner.

@@ -11,6 +11,7 @@ from itertools import combinations
 app = Flask(__name__)
 CORS(app) 
 
+all_entities = []
 models = {
     "detect": {
         "modelName": "detectModel",
@@ -239,6 +240,16 @@ def ufcluster(nltk_entities, csv_path='entity_embeddings.csv'):
     
     return union_sets
 
+@app.route('/update-entities', methods=['POST'])
+def update_entities():
+    #It should be named all entities
+    global nltk_entities
+    new_entities = request.json.get('entities', [])
+    # all_entities.extend(new_entities)
+    nltk_entities = new_entities
+    return jsonify({"message": "Entities updated successfully", "all_entities": nltk_entities})
+
+
 @app.route('/clusteruf', methods=['POST'])
 def clusteruf():
     global nltk_entities
@@ -246,7 +257,7 @@ def clusteruf():
         if not nltk_entities:
             return jsonify({"error": "No NLTK entities found. Please run the NER endpoint first."}), 400
 
-        entities_text = [entity['text'] for entity in nltk_entities]
+        # entities_text = [entity['text'] for entity in nltk_entities]
         result = ufcluster(nltk_entities)
         print("cluser2")
         print(result)
