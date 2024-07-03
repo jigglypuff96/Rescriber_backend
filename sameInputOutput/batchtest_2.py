@@ -5,11 +5,35 @@ import pandas as pd
 # Define the model
 model = 'llama3'
 text1 = "Is San Zhang and Zhang, San same entity? only answer yes or no"
+text6 = """
+Is Microsoft and Apple same entity? only answer yes or no"""
+text7 = """
+Is Amazon and Apple same entity? only answer yes or no"""
+text5 = """
+Is Bill Gates and Bezos same entity? only answer yes or no
+"""
+text4 ="""
+Detect all the personal idetifiable info in the following text. 
+Review the following dataset and come up with insightful observations:
+14	Berlin, Germany	7/1/2024	7/10/2024	9	Hans Mueller	48	Male	German	Hotel	1400	Flight	700
+15	Marrakech, Morocco	8/20/2024	8/27/2024	7	Fatima Khouri	26	Female	Moroccan	Riad	600	Flight	400
+16	Edinburgh, Scotland	9/5/2024	9/12/2024	7	James MacKenzie	32	Male	Scottish	Hotel	900	Train	150
+17	Paris	9/1/2023	9/10/2023	9	Sarah Johnson	30	Female	American	Hotel	$900 	Plane	$400
+18	Bali	8/15/2023	8/25/2023	10	Michael Chang	28	Male	Chinese	Resort	$1,500 	Plane	$700
+19	London	7/22/2023	7/28/2023	6	Olivia Rodriguez	35	Female	British	Hotel	$1,200 	Train	$150
+20	
+"""
 text2 = """
 Detect all the personal idetifiable info in the following text. 
 Review the following dataset and come up with insightful observations:
 Trip ID	Destination	Start date	End date	Duration (days)	Traveler name	Traveler age	Traveler gender	Traveler nationality	Accommodation type	Accommodation cost	Transportation type	Transportation cost
 1	London, UK	5/1/2023	5/8/2023	7	John Smith	35	Male	American	Hotel	1200	Flight	600
+3	Bali, Indonesia	7/1/2023	7/8/2023	7	David Lee	45	Male	Korean	Villa	1000	Flight	700
+4	New York, USA	8/15/2023	8/29/2023	14	Sarah Johnson	29	Female	British	Hotel	2000	Flight	1000
+5	Tokyo, Japan	9/10/2023	9/17/2023	7	Kim Nguyen	26	Female	Vietnamese	Airbnb	700	Train	200
+6	Paris, France	10/5/2023	10/10/2023	5	Michael Brown	42	Male	American	Hotel	1500	Flight	800
+7	Sydney, Australia	11/20/2023	11/30/2023	10	Emily Davis	33	Female	Australian	Hostel	500	Flight	1200
+8	Rio de Janeiro, Brazil	1/5/2024	1/12/2024	7	Lucas Santos	25	Male	Brazilian	Airbnb	900	Flight	600
 """
 text3 = """
 Detect all the personal idetifiable info in the following text. return json format
@@ -55,13 +79,7 @@ Trip ID	Destination	Start date	End date	Duration (days)	Traveler name	Traveler a
 38	Canada	4/19/2023	4/26/2023	7	Amelia Brown	38	Female	Australian	Airbnb	$350 	Bus	$75
 39	Paris, France	6/12/2022	6/19/2022	7	Mia Johnson	25	Female	American	Hotel	1400	Plane	600
 40	Sydney, Australia	1/2/2023	1/9/2023	7	Adam Lee	33	Male	Canadian	Airbnb	800	Train	150"""
-# Define the messages
-messages = [
-    {
-        'role': 'user',
-        'content': text2
-    }
-]
+
 
 # Base options dictionary
 base_options = {
@@ -126,19 +144,19 @@ for i in range(6):
     #     # options['top_k'] = 30  
     # text2 yes or no
     #text1 long text
-    # if i == 0:
-    #     text_content = text1
-    # elif i == 1:
-    #     text_content = text2
-    # elif i == 2:
-    #     text_content = text1
-    # elif i == 3:
-    #     text_content = text2
-    # elif i == 4:
-    #     text_content = text1
-    # elif i == 5:
-    #     text_content = text2
-    text_content = text1
+    if i == 0:
+        text_content = text1
+    elif i == 1:
+        text_content = text1
+    elif i == 2:
+        text_content = text6
+    elif i == 3:
+        text_content = text6
+    elif i == 4:
+        text_content = text7
+    elif i == 5:
+        text_content = text5
+    # text_content = text7
     
     messages = [
         {
@@ -151,6 +169,8 @@ for i in range(6):
     response = ollama.chat(
         model=model,
         messages=messages,
+        # format = "json",
+        # stream = True,
         options=options
     )
     
