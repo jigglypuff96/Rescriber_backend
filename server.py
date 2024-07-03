@@ -144,6 +144,7 @@ def create_union_set(df):
     
     return union_set
 
+
 def is_valid_pair(e1, e2):
     if len(e1) > len(e2):
         t1, t2 = e1, e2
@@ -153,7 +154,7 @@ def is_valid_pair(e1, e2):
     t1 = t1.lower()
     t2 = t2.lower()
     it = iter(t1)
-    return all(c in it for c in t2)
+    return all(c in it for c in t2) 
 
 class UnionFind:
     def __init__(self):
