@@ -4,14 +4,14 @@ import pandas as pd
 # https://github.com/ggerganov/llama.cpp/tree/master/examples/main#generation-flags 
 # Define the model
 model = 'llama3'
-text2 = "why is the sky blue"
-text1 = """
+text1 = "Is San Zhang and Zhang, San same entity? only answer yes or no"
+text2 = """
 Detect all the personal idetifiable info in the following text. 
 Review the following dataset and come up with insightful observations:
 Trip ID	Destination	Start date	End date	Duration (days)	Traveler name	Traveler age	Traveler gender	Traveler nationality	Accommodation type	Accommodation cost	Transportation type	Transportation cost
 1	London, UK	5/1/2023	5/8/2023	7	John Smith	35	Male	American	Hotel	1200	Flight	600
 """
-text = """
+text3 = """
 Detect all the personal idetifiable info in the following text. return json format
 Review the following dataset and come up with insightful observations:
 Trip ID	Destination	Start date	End date	Duration (days)	Traveler name	Traveler age	Traveler gender	Traveler nationality	Accommodation type	Accommodation cost	Transportation type	Transportation cost
@@ -56,11 +56,12 @@ Trip ID	Destination	Start date	End date	Duration (days)	Traveler name	Traveler a
 39	Paris, France	6/12/2022	6/19/2022	7	Mia Johnson	25	Female	American	Hotel	1400	Plane	600
 40	Sydney, Australia	1/2/2023	1/9/2023	7	Adam Lee	33	Male	Canadian	Airbnb	800	Train	150"""
 # Define the messages
-messages = {
+messages = [
+    {
         'role': 'user',
         'content': text2
     }
-
+]
 
 # Base options dictionary
 base_options = {
@@ -122,7 +123,29 @@ for i in range(6):
     else:
         pass
     #     pass
-    #     # options['top_k'] = 30         
+    #     # options['top_k'] = 30  
+    # text2 yes or no
+    #text1 long text
+    # if i == 0:
+    #     text_content = text1
+    # elif i == 1:
+    #     text_content = text2
+    # elif i == 2:
+    #     text_content = text1
+    # elif i == 3:
+    #     text_content = text2
+    # elif i == 4:
+    #     text_content = text1
+    # elif i == 5:
+    #     text_content = text2
+    text_content = text1
+    
+    messages = [
+        {
+            'role': 'user',
+            'content': text_content
+        }
+    ]       
     
     # Call the API
     response = ollama.chat(
