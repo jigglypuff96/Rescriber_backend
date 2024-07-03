@@ -2,8 +2,8 @@ const express = require("express");
 const bodyParser = require("body-parser");
 const cors = require("cors");
 const { default: ollama } = require("ollama");
-const https = require('https');
-const fs = require('fs');
+const https = require("https");
+const fs = require("fs");
 
 const app = express();
 const httpPort = 3000;
@@ -27,6 +27,7 @@ const models = {
       ID_NUMBER
       NAME
       USERNAME
+      KEYS: Passwords, passkeys, API keys, encryption keys, and any other form of security keys.
       GEOLOCATION: Places and locations, such as cities, provinces, countries, international regions, or named infrastructures (bus stops, bridges, etc.).
       AFFILIATION: Names of organizations, such as public and private companies, schools, universities, public institutions, prisons, healthcare institutions, non-governmental organizations, churches, etc.
       DEMOGRAPHIC_ATTRIBUTE: Demographic attributes of a person, such as native language, descent, heritage, ethnicity, nationality, religious or political group, birthmarks, ages, sexual orientation, gender and sex.
@@ -157,8 +158,8 @@ app.post("/abstract", async (req, res) => {
 });
 
 const httpsOptions = {
-  key: fs.readFileSync('selfsigned.key'),
-  cert: fs.readFileSync('selfsigned.crt')
+  key: fs.readFileSync("selfsigned.key"),
+  cert: fs.readFileSync("selfsigned.crt"),
 };
 
 https.createServer(httpsOptions, app).listen(httpsPort, () => {
@@ -170,7 +171,7 @@ app.listen(httpPort, "0.0.0.0", () => {
 });
 
 app.get("/", async (req, res) => {
-  console.log ("Get request received!")
+  console.log("Get request received!");
   res.send("HI");
 });
 
