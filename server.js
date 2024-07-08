@@ -157,6 +157,15 @@ app.post("/abstract", async (req, res) => {
   }
 });
 
+app.get("/openaiapikey", async (req, res) => {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (apiKey) {
+    res.status(200).json({ apiKey });
+  } else {
+    res.status(500).json({ error: "API key not found" });
+  }
+});
+
 const httpsOptions = {
   key: fs.readFileSync("selfsigned.key"),
   cert: fs.readFileSync("selfsigned.crt"),
