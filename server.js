@@ -4,6 +4,7 @@ const cors = require("cors");
 const { default: ollama } = require("ollama");
 const https = require("https");
 const fs = require("fs");
+require("dotenv").config();
 
 const app = express();
 const httpPort = 3000;
@@ -159,6 +160,7 @@ app.post("/abstract", async (req, res) => {
 
 app.get("/openaiapikey", async (req, res) => {
   const apiKey = process.env.OPENAI_API_KEY;
+  console.log("process.env.OPENAI_API_KEY", apiKey);
   if (apiKey) {
     res.status(200).json({ apiKey });
   } else {
