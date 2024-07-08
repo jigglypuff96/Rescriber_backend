@@ -160,7 +160,6 @@ app.post("/abstract", async (req, res) => {
 
 app.get("/openaiapikey", async (req, res) => {
   const apiKey = process.env.OPENAI_API_KEY;
-  console.log("process.env.OPENAI_API_KEY", apiKey);
   if (apiKey) {
     res.status(200).json({ apiKey });
   } else {
