@@ -1,8 +1,8 @@
-
+from flask import Flask, request, jsonify
 from flask_cors import CORS  
 import ollama
 import json
-import jsonify
+# import jsonify
 import numpy as np
 from datetime import datetime
 # from scipy.spatial.distance import cosine
@@ -111,12 +111,17 @@ def detect():
             stream=True,
             format="json",
         )
-        return jsonify({"results": response["message"]["content"]})
+        print("here")
+        # print(response)
+        # return None
+        # return jsonify({"results": response["message"]["content"]})
 
-        # results = []
-        # for chunk in response:
-        #     results.append(chunk['message']['content'])
+        results = []
+        for chunk in response:
+            results.append(chunk['message']['content'])
+        print(results)
         # return jsonify({"results": ''.join(results)})
+        return jsonify(''.join(results))
     except ollama.ResponseError as e:
         print("Error running Ollama:", e)
         return jsonify({"error": "Error running Ollama", "details": str(e)}), 500
