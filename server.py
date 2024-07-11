@@ -144,9 +144,10 @@ def detect():
             format="json",
             options=base_options
         )
-        print ("detect response ready")
+        print("detect response ready")
         results = []
         for chunk in response:
+            print ("chunk content: ",chunk['message']['content'])
             results.append(chunk['message']['content'])
         combined_results = ''.join(results)
         print(combined_results)
