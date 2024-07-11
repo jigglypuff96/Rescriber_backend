@@ -3,7 +3,9 @@ import pandas as pd
 # params explained 
 # https://github.com/ggerganov/llama.cpp/tree/master/examples/main#generation-flags 
 # Define the model
-model = 'llama3'
+# model = 'llama3'
+# model = 'phi3'
+model = 'llava'
 text1 = "Is San Zhang and Zhang, San same entity? only answer yes or no"
 text6 = """
 Is Microsoft and Apple same entity? only answer yes or no"""

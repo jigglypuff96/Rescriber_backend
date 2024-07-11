@@ -10,7 +10,7 @@ from itertools import combinations
 
 app = Flask(__name__)
 CORS(app) 
-
+global_base_model = "llama3"
 all_entities = []
 models = {
     "detect": {
@@ -86,7 +86,7 @@ def create_model(model_key):
     SYSTEM "{model_info['prompt']}"
     """
     try:
-        ollama.create(model=model_info["modelName"], modelfile=modelfile)
+        ollama.create(model=global_base_model, modelfile=modelfile)
         print(f"Model '{model_info['modelName']}' has been created successfully.")
     except ollama.ResponseError as e:
         print(f"Failed to create the model: {e}")
@@ -422,4 +422,6 @@ if __name__ == "__main__":
     create_model("detect")
     create_model("cluster")
     create_model("abstract")
+    
+
     app.run(port=3000)
