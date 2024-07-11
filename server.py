@@ -138,23 +138,18 @@ def detect():
         response = ollama.chat(
             model=global_base_model,
             messages=[{'role': 'user', 'content': user_message},
-                      {'role': 'system','content': models["detect"]["prompt"]}
+                      {'role': 'system', 'content': models["detect"]["prompt"]}
                       ],
             stream=True,
             format="json",
             options=base_options
         )
-        print("here")
-        # print(response)
-        # return None
-        # return jsonify({"results": response["message"]["content"]})
-
         results = []
         for chunk in response:
             results.append(chunk['message']['content'])
-        print(results)
-        # return jsonify({"results": ''.join(results)})
-        return jsonify(''.join(results))
+        combined_results = ''.join(results)
+        print(combined_results)
+        return jsonify({"results": combined_results})
     except ollama.ResponseError as e:
         print("Error running Ollama:", e)
         return jsonify({"error": "Error running Ollama", "details": str(e)}), 500
