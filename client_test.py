@@ -180,19 +180,19 @@ def main(user_message):
     
 
 if __name__ == "__main__":
-    #user_message = """I will be the valedictorian of my class. Please write me a presentation based on the following information: As a student at Vanderbilt University, I feel honored. The educational journey at Vandy has been nothing less than enlightening. The dedicated professors here at Vanderbilt are the best. As an 18 year old student at VU, the opportunities are endless."""
+    user_message = """I will be the valedictorian of my class. Please write me a presentation based on the following information: As a student at Vanderbilt University, I feel honored. The educational journey at Vandy has been nothing less than enlightening. The dedicated professors here at Vanderbilt are the best. As an 18 year old student at VU, the opportunities are endless."""
 #     user_message ="""Here is the offer statistics for some students of the class of 2023:
 # North America: MIT, UCLA, University of California Berkeley, Harvard University, Stanford University, Massachusetts Institute of Technology, Princeton University, University of Chicago, University of Toronto, McGill University, University of California Los Angeles, UChi, CMU, Carnegie Mellon University, UCB, University of British Columbia
 # Canada: UBC
 # Europe: ETHZ, ETH Zurich, Oxford, University of Cambridge, Imperial College London, London School of Economics, LSE, IC
 # """
-    #user_message = """My friend Julie and I are both 19 years old so can’t drink really even tho we are in Korea. How can I handle social situations where there might be pressure to drink"""
-    user_message= """
-Review the following dataset and come up with insightful observations:
-Trip ID	Destination	Start date	End date	Duration (days)	Traveler name	Traveler age	Traveler gender	Traveler nationality	Accommodation type	Accommodation cost	Transportation type	Transportation cost
-1	London, UK	5/1/2023	5/8/2023	7	John Smith	35	Male	American	Hotel	1200	Flight	600
-2	Phuket, Thailand	6/15/2023	6/20/2023	5	Jane Doe	28	Female	Canadian	Resort	800	Flight	500
-3	Bali, Indonesia	7/1/2023	7/8/2023	7	David Lee	45	Male	Korean	Villa	1000	Flight	700
-4	New York, USA	8/15/2023	8/29/2023	14	Sarah Johnson	29	Female	British	Hotel	2000	Flight	1000
-"""
+    # user_message = """My friend Julie and I are both 19 years old so can’t drink really even tho we are in Korea. How can I handle social situations where there might be pressure to drink"""
+#     user_message= """
+# Review the following dataset and come up with insightful observations:
+# Trip ID	Destination	Start date	End date	Duration (days)	Traveler name	Traveler age	Traveler gender	Traveler nationality	Accommodation type	Accommodation cost	Transportation type	Transportation cost
+# 1	London, UK	5/1/2023	5/8/2023	7	John Smith	35	Male	American	Hotel	1200	Flight	600
+# 2	Phuket, Thailand	6/15/2023	6/20/2023	5	Jane Doe	28	Female	Canadian	Resort	800	Flight	500
+# 3	Bali, Indonesia	7/1/2023	7/8/2023	7	David Lee	45	Male	Korean	Villa	1000	Flight	700
+# 4	New York, USA	8/15/2023	8/29/2023	14	Sarah Johnson	29	Female	British	Hotel	2000	Flight	1000
+# """
     main(user_message)

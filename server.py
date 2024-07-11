@@ -316,10 +316,13 @@ def detect():
     try:
         print("Waiting for DETECT response...")
         response = ollama.chat(
-            model=models["detect"]["modelName"],
-            messages=[{'role': 'user', 'content': user_message}],
+            model=global_base_model,
+            messages=[{'role': 'user', 'content': user_message},
+                      {'role': 'system','content': models["detect"]["prompt"]}
+                      ],
             stream=True,
-            format="json"
+            format="json",
+
         )
         results = []
         for chunk in response:
@@ -386,10 +389,13 @@ def cluster():
     try:
         print("Waiting for CLUSTER response...")
         response = ollama.chat(
-            model=models["cluster"]["modelName"],
-            messages=[{'role': 'user', 'content': user_message}],
+            model=global_base_model,
+            messages=[{'role': 'user', 'content': user_message},
+                      {'role': 'system','content': models["cluster"]["prompt"]}
+                      ],
             stream=True,
-            format ="json"
+            format ="json",
+            # system = models["cluster"]["prompt"]
         )
         results = []
         for chunk in response:
@@ -419,9 +425,7 @@ def home():
 
 if __name__ == "__main__":
     pull_model("llama3")
-    create_model("detect")
-    create_model("cluster")
-    create_model("abstract")
+
     
 
     app.run(port=3000)
