@@ -207,5 +207,6 @@ async def home():
     return "HI"
 
 if __name__ == "__main__":
-    pull_model("llama3")
-    app.run(port=3000)
+    pull_model(global_base_model)
+    app.run(host='127.0.0.1', port=3000)
+
