@@ -141,9 +141,9 @@ def detect():
                       {'role': 'system', 'content': models["detect"]["prompt"]}
                       ],
             stream=True,
-            format="json",
-            options=base_options
+            format="json"
         )
+        # options=base_options
         print("detect response ready")
         results = []
         for chunk in response:
@@ -207,6 +207,6 @@ async def home():
     return "HI"
 
 if __name__ == "__main__":
-    pull_model(global_base_model)
+    pull_model("llama3")
     app.run(host='127.0.0.1', port=3000)
 
