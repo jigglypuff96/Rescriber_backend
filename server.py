@@ -109,7 +109,22 @@ models = {
 # }
 
 base_options = {
-    "seed": 40
+    "seed": 40,
+    "num_predict": 100,
+    "top_k": 20,
+    "top_p": 0.9,
+    "tfs_z": 0.5,
+    "typical_p": 0.7,
+    "repeat_last_n": 33,
+    "temperature": 0,
+    "repeat_penalty": 1.2,
+    "presence_penalty": 1.5,
+    "frequency_penalty": 1.0,
+    "mirostat": 1,
+    "mirostat_tau": 0.8,
+    "mirostat_eta": 0.6,
+    "penalize_newline": True,
+    "stop": ["\n", "user:"]
 }
 def pull_model(model_name):
     try:
@@ -154,7 +169,7 @@ def detect():
             results.append(chunk['message']['content'])
         combined_results = ''.join(results)
         print(combined_results)
-        return jsonify({"results": combined_results})
+        return jsonify(combined_results)
     except ollama.ResponseError as e:
         print("Error running Ollama:", e)
         return jsonify({"error": "Error running Ollama", "details": str(e)}), 500
