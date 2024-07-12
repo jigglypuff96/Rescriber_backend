@@ -9,6 +9,12 @@ from datetime import datetime
 import pandas as pd
 from itertools import combinations
 import ssl
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+openai_api_key = os.getenv('OPENAI_API_KEY')
+
 
 app = Flask(__name__)
 CORS(app) 
@@ -76,37 +82,6 @@ models = {
         Then the output JSON format should be: {"results": YOUR_REWRITE} where YOUR_REWRITE needs to be a string that no longer contains ProtectedInformation, here's a sample YOUR_REWRITE: I graduated from a prestigious university, and I earn a six-figure salary now. Recently in the office, I had some conflict with my boss, and I am thinking about whether I should start interviewing with other companies to get a better offer.'''
     },
 }
-
-# base_options = {
-#     "num_keep": 5,
-#     "seed": 40,
-#     "num_predict": 100, #100
-#     "top_k": 20,
-#     "top_p": 0.9,
-#     "tfs_z": 0.5,
-#     "typical_p": 0.7,
-#     "repeat_last_n": 33,
-#     "temperature": 0,
-#     "repeat_penalty": 1.2,
-#     "presence_penalty": 1.5,
-#     "frequency_penalty": 1.0,
-#     "mirostat": 1,
-#     "mirostat_tau": 0.8,
-#     "mirostat_eta": 0.6,
-#     "penalize_newline": True,
-#     "stop": ["\n", "user:"],
-#     "numa": False,
-#     "num_ctx": 1024,
-#     "num_batch": 2,
-#     "num_gpu": 1,
-#     "main_gpu": 0,
-#     "low_vram": False,
-#     "f16_kv": True,
-#     "vocab_only": False,
-#     "use_mmap": True,
-#     "use_mlock": False,
-#     "num_thread": 8
-# }
 
 base_options = {
     "seed": 40,
@@ -192,31 +167,29 @@ def detect():
 #         print("Error running Ollama:", error)
 #         return jsonify({"error": "Error running Ollama", "details": str(error)}), 500
 
-# @app.route("/abstract", methods=["POST"])
-# async def abstract():
-#     user_message = request.json.get('message')
+@app.route("/abstract", methods=["POST"])
+async def abstract():
+    user_message = request.json.get('message')
 
-#     try:
-#         print("Waiting for ABSTRACT response...")
-#         response = await ollama.chat({
-#             "model": models["abstract"]["modelName"],
-#             "messages": [{"role": "user", "content": user_message}],
-#             "format": "json",
-#         })
+    try:
+        print("Waiting for ABSTRACT response...")
+        response = await ollama.chat({
+            "model": models["abstract"]["modelName"],
+            "messages": [{"role": "user", "content": user_message}],
+            "format": "json",
+        })
+        print("ABSTRACT response sent.")
+        return jsonify({"results": response["message"]["content"]})
+    except Exception as error:
+        print("Error running Ollama:", error)
+        return jsonify({"error": "Error running Ollama", "details": str(error)}), 500
 
-#         return jsonify({"results": response["message"]["content"]})
-#         print("ABSTRACT response sent.")
-#     except Exception as error:
-#         print("Error running Ollama:", error)
-#         return jsonify({"error": "Error running Ollama", "details": str(error)}), 500
-
-# @app.route("/openaiapikey", methods=["GET"])
-# async def get_openai_api_key():
-#     api_key = os.getenv('OPENAI_API_KEY')
-#     if api_key:
-#         return jsonify({"apiKey": api_key}), 200
-#     else:
-#         return jsonify({"error": "API key not found"}), 500
+@app.route("/openaiapikey", methods=["GET"])
+async def get_openai_api_key():
+    if openai_api_key:
+        return jsonify({"apiKey": openai_api_key}), 200
+    else:
+        return jsonify({"error": "API key not found"}), 500
 
 
 @app.route("/", methods=["GET"])
