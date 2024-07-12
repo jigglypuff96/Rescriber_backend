@@ -173,11 +173,15 @@ async def abstract():
 
     try:
         print("Waiting for ABSTRACT response...")
-        response = await ollama.chat({
-            "model": models["abstract"]["modelName"],
-            "messages": [{"role": "user", "content": user_message}],
-            "format": "json",
-        })
+        response = ollama.chat(
+            model=global_base_model,
+            messages=[{'role': 'user', 'content': user_message},
+                      {'role': 'system', 'content': models["abstract"]["prompt"]}
+                      ],
+            stream=True,
+            format="json",
+             options=base_options
+        )
         print("ABSTRACT response sent.")
         return jsonify({"results": response["message"]["content"]})
     except Exception as error:
