@@ -175,18 +175,28 @@ async def abstract():
         print("Waiting for ABSTRACT response...")
         response = ollama.chat(
             model=global_base_model,
-            messages=[{'role': 'user', 'content': user_message},
-                      {'role': 'system', 'content': models["abstract"]["prompt"]}
-                      ],
+            messages=[
+                {'role': 'user', 'content': user_message},
+                {'role': 'system', 'content': models["abstract"]["prompt"]}
+            ],
             stream=True,
             format="json",
-             options=base_options
+            options=base_options
         )
+        
+        # Collect the streamed response
+        results = []
+        for chunk in response:
+            print("chunk content:", chunk['message']['content'])
+            results.append(chunk['message']['content'])
+        
+        combined_results = ''.join(results)
         print("ABSTRACT response sent.")
-        return jsonify({"results": response["message"]["content"]})
+        return jsonify({"results": combined_results})
     except Exception as error:
         print("Error running Ollama:", error)
         return jsonify({"error": "Error running Ollama", "details": str(error)}), 500
+
 
 @app.route("/openaiapikey", methods=["GET"])
 async def get_openai_api_key():
