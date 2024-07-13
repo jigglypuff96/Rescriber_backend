@@ -146,7 +146,7 @@ def detect():
             results.append(chunk['message']['content'])
         combined_results = ''.join(results)
         print(combined_results)
-        return jsonify(combined_results)
+        return jsonify({"results": combined_results})
     except ollama.ResponseError as e:
         print("Error running Ollama:", e)
         return jsonify({"error": "Error running Ollama", "details": str(e)}), 500
