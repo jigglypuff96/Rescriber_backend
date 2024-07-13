@@ -183,9 +183,7 @@ async def abstract():
                 {'role': 'user', 'content': user_message},
                 {'role': 'system', 'content': models["abstract"]["prompt"]}
             ],
-            stream=False,
-            format="json",
-            options=base_options
+            format="json"
         )
         print ("response = ",response)
         print ("actual result =", response['message']['content'])
