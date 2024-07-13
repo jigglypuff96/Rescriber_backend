@@ -79,7 +79,8 @@ models = {
         For example if the input is:
         <Text>I graduated from CMU, and I earn a six-figure salary now. Today in the office, I had some conflict with my boss, and I am thinking about whether I should start interviewing with other companies to get a better offer.</Text>
         <ProtectedInformation>CMU, Today</ProtectedInformation>
-        Then the output JSON format should be: {"results": YOUR_REWRITE} where YOUR_REWRITE needs to be a string that no longer contains ProtectedInformation, here's a sample YOUR_REWRITE: I graduated from a prestigious university, and I earn a six-figure salary now. Recently in the office, I had some conflict with my boss, and I am thinking about whether I should start interviewing with other companies to get a better offer.'''
+        Then the output JSON format should be: {"results": YOUR_REWRITE} where YOUR_REWRITE needs to be a string which is the paraphrased Text that no longer contains ProtectedInformation, here's a sample YOUR_REWRITE of the sample Text and ProtectedInformation: I graduated from a prestigious university, and I earn a six-figure salary now. Recently in the office, I had some conflict with my boss, and I am thinking about whether I should start interviewing with other companies to get a better offer. 
+        In this case directly output JSON object: {"results": "I graduated from a prestigious university, and I earn a six-figure salary now. Recently in the office, I had some conflict with my boss, and I am thinking about whether I should start interviewing with other companies to get a better offer."}'''
     },
 }
 
