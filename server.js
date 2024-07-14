@@ -100,14 +100,29 @@ app.post("/detect", async (req, res) => {
 
   try {
     console.log("Waiting for DETECT response...");
+    console.log(userMessage)
     const response = await ollama.chat({
       model: models.detect.modelName,
       messages: [{ role: "user", content: userMessage }],
       format: "json",
+      seed: 40,
+      top_k: 20,
+      top_p: 0.9,
+      tfs_z: 0.5,
+      typical_p: 0.7,
+      repeat_last_n: 33,
+      temperature: 0,
+      repeat_penalty: 1.2,
+      presence_penalty: 1.5,
+      frequency_penalty: 1.0,
+      mirostat: 1,
+      mirostat_tau: 0.8,
+      mirostat_eta: 0.6,
     });
 
     res.send({ results: response.message.content });
     console.log("DETECT response sent.");
+    console.log(response.message.content)
   } catch (error) {
     console.error("Error running Ollama:", error);
     res
