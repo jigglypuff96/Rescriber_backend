@@ -101,28 +101,66 @@ app.post("/detect", async (req, res) => {
   try {
     console.log("Waiting for DETECT response...");
     console.log(userMessage)
-    const response = await ollama.chat({
-      model: models.detect.modelName,
-      messages: [{ role: "user", content: userMessage }],
-      format: "json",
-      seed: 40,
-      top_k: 20,
-      top_p: 0.9,
-      tfs_z: 0.5,
-      typical_p: 0.7,
-      repeat_last_n: 33,
-      temperature: 0,
-      repeat_penalty: 1.2,
-      presence_penalty: 1.5,
-      frequency_penalty: 1.0,
-      mirostat: 1,
-      mirostat_tau: 0.8,
-      mirostat_eta: 0.6,
-    });
+    const maxSegmentLength = 500;
+    let segments = [];
 
-    res.send({ results: response.message.content });
+    for (let i = 0; i < userMessage.length; i += maxSegmentLength) {
+        segments.push(userMessage.substring(i, i + maxSegmentLength));
+    }
+    const mergedResponse = { results: [] };
+
+    // Iterate over each JSON string in the list
+    for (let i = 0; i < segments.length ; ++i) {
+        const segment = segments[i];
+        try {
+	    const response = await ollama.chat({
+		model: models.detect.modelName,
+		messages: [{ role: "user", content: segment }],
+		format: "json",
+		seed: 40,
+		top_k: 20,
+		top_p: 0.9,
+		tfs_z: 0.5,
+		typical_p: 0.7,
+		repeat_last_n: 33,
+		temperature: 0,
+		repeat_penalty: 1.2,
+		presence_penalty: 1.5,
+		frequency_penalty: 1.0,
+		mirostat: 1,
+		mirostat_tau: 0.8,
+		mirostat_eta: 0.6,
+	    });
+
+
+            // Parse the JSON string into an object
+            const jsonObject = JSON.parse(response.message.content);
+	    console.log(`DETECT ${i}`)
+	    console.log(jsonObject)
+
+            // Check if the object has a 'results' property and it is an array
+            if (jsonObject.results && Array.isArray(jsonObject.results)) {
+                // Merge the 'results' array into the final merged object
+                mergedResponse.results.push(...jsonObject.results);
+            }
+        } catch (error) {
+            console.error(`Error parsing JSON string: ${segment}`, error);
+        }
+    }
+
+    // Deduplicate the list
+    const uniqueMap = new Map();
+
+    mergedResponse.results.forEach(item => {
+      if (!uniqueMap.has(item.text)) {
+        uniqueMap.set(item.text, item);
+      }
+    });
+    mergedResponse.results = Array.from(uniqueMap.values())
+
+    res.send({ results: JSON.stringify(mergedResponse) });
     console.log("DETECT response sent.");
-    console.log(response.message.content)
+    console.log(mergedResponse)
   } catch (error) {
     console.error("Error running Ollama:", error);
     res
