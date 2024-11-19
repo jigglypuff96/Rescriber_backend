@@ -1,4 +1,5 @@
 from flask import Flask, request, jsonify
+from flask_cors import CORS
 import ollama
 import json
 import time
@@ -6,7 +7,7 @@ from datetime import datetime
 
 # Flask app setup
 app = Flask(__name__)
-
+CORS(app, resources={r"/*": {"origins": "*"}})
 # Ollama model configuration
 global_base_model = "llama3"
 
@@ -37,7 +38,7 @@ system_prompts = {
         Result should be in its minimum possible unit.
         Return me ONLY a json object in the following format (no other extra text!): {"results": [{"entity_type": YOU_DECIDE_THE_PII_TYPE, "text": PART_OF_MESSAGE_YOU_IDENTIFIED_AS_PII]}''',
     "cluster": '''For the given message, find ALL segments of the message with the same contextual meaning as the given PII. Consider segments that are semantically related or could be inferred from the original PII or share a similar context or meaning. List all of them in a list, and each segment should only appear once in each list. Please return only in JSON format.''',
-    "abstract": '''Rewrite the text to abstract the protected information, and don't change other parts. Please return with JSON format.'''
+    "abstract": '''Rewrite the text to abstract the protected information, and don't change other parts. Please return with JSON format: {"results": REWRITE_TEXT} For example, if the given text is "I am 18 years old", and the protected information is "18 years old", then the returned output could be: {"results": "I am a young adult."}'''
 }
 
 base_options = {
@@ -52,7 +53,7 @@ def split_into_chunks(input_text, chunk_size=100):
     return [' '.join(words[i:i + chunk_size]) for i in range(0, len(words), chunk_size)]
 
 
-def process_request(model_name, prompt, input_text):
+def process_request(model_name, prompt, input_text, isDetect=False):
     """Call Ollama with chunked inputs and combine results."""
     chunks = split_into_chunks(input_text)
     results = []
@@ -72,8 +73,13 @@ def process_request(model_name, prompt, input_text):
 
             message_content = response['message']['content']
             parsed_content = json.loads(message_content)
-            results.extend(parsed_content.get('results', []))
+            print("parsed_content = ", parsed_content)
+            if isDetect:
+               results.extend(parsed_content.get('results', []))
+            else:
+               results.extend(parsed_content.get('results', []))
         except Exception as e:
+            print("Chunk = ", chunk)
             print("Error processing chunk:", e)
             continue
 
@@ -138,7 +144,7 @@ def abstract():
     end_time = time.time()
 
     return jsonify({
-        "results": results,
+        "results": ' '.join(results),
         "processing_time": end_time - start_time
     })
 
@@ -147,5 +153,6 @@ if __name__ == "__main__":
     app.run(
         host="0.0.0.0",
         port=5000,
-        ssl_context=('selfsigned.crt', 'selfsigned.key')
+        ssl_context=('certs/fullchain.pem', 'certs/privkey.pem')
     )
+
