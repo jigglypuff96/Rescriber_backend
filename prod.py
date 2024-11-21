@@ -4,6 +4,7 @@ import ollama
 import json
 import time
 from datetime import datetime
+import threading
 
 # Flask app setup
 app = Flask(__name__)
@@ -38,7 +39,11 @@ system_prompts = {
         Result should be in its minimum possible unit.
         Return me ONLY a json object in the following format (no other extra text!): {"results": [{"entity_type": YOU_DECIDE_THE_PII_TYPE, "text": PART_OF_MESSAGE_YOU_IDENTIFIED_AS_PII]}''',
     "cluster": '''For the given message, find ALL segments of the message with the same contextual meaning as the given PII. Consider segments that are semantically related or could be inferred from the original PII or share a similar context or meaning. List all of them in a list, and each segment should only appear once in each list. Please return only in JSON format.''',
-    "abstract": '''Rewrite the text to abstract the protected information, and don't change other parts. Please return with JSON format: {"results": REWRITE_TEXT} For example, if the given text is "I am 18 years old", and the protected information is "18 years old", then the returned output could be: {"results": "I am a young adult."}'''
+    "abstract": '''Rewrite the text to abstract the protected information, and don't change other parts. Please return with JSON format. 
+    For example if the input is:
+    <Text>I graduated from CMU, and I earn a six-figure salary now. Today in the office, I had some conflict with my boss, and I am thinking about whether I should start interviewing with other companies to get a better offer.</Text>
+    <ProtectedInformation>CMU, Today</ProtectedInformation>
+    Then the output JSON format should be: {"results": YOUR_REWRITE} where YOUR_REWRITE needs to be a string that no longer contains ProtectedInformation, here's a sample YOUR_REWRITE: I graduated from a prestigious university, and I earn a six-figure salary now. Recently in the office, I had some conflict with my boss, and I am thinking about whether I should start interviewing with other companies to get a better offer.'''
 }
 
 base_options = {
@@ -72,8 +77,17 @@ def process_request(model_name, prompt, input_text, isDetect=False):
             )
 
             message_content = response['message']['content']
-            parsed_content = json.loads(message_content)
-            print("parsed_content = ", parsed_content)
+            if not message_content.strip():
+                print("Empty message content received.")
+                continue
+
+            try:
+                parsed_content = json.loads(message_content)
+                print("parsed_content = ", parsed_content)
+            except json.JSONDecodeError:
+                print("Failed to decode JSON from response.")
+                continue
+            
             if isDetect:
                results.extend(parsed_content.get('results', []))
             else:
@@ -147,12 +161,34 @@ def abstract():
         "results": ' '.join(results),
         "processing_time": end_time - start_time
     })
+    
+def initialize_server(test_message):
+    """Simulate an initial detect request internally."""
+    print("Initializing server with test message...")
+    start_time = time.time()
+    results = process_request(global_base_model, system_prompts['detect'], test_message)
+    end_time = time.time()
+
+    print("Initialization complete.")
+    print("Results:", results)
+    print("Processing time:", end_time - start_time)
+
 
 
 if __name__ == "__main__":
+
+    test_message = "Hi, welcome to Rescriber!"
+    print("Processing detect request... ", test_message)
+    init_thread = threading.Thread(target=initialize_server, args=(test_message,), daemon=True)
+    init_thread.start()
     app.run(
         host="0.0.0.0",
         port=5331,
-        ssl_context=('certs/fullchain.pem', 'certs/privkey.pem')
+        ssl_context=('python_cert/selfsigned.crt', 'python_cert/selfsigned.key')
     )
+    
+    # test_message = "Hi, welcome to Rescriber!"
+    # print("Processing detect request... ")
+    # print(test_message)
+    # initialize_server(test_message)
 

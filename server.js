@@ -8,7 +8,7 @@ require("dotenv").config();
 
 const app = express();
 const httpPort = 3000;
-const httpsPort = 3443;
+const httpsPort = 5331; // 3443
 app.use(cors());
 app.use(bodyParser.json());
 
@@ -100,57 +100,56 @@ app.post("/detect", async (req, res) => {
 
   try {
     console.log("Waiting for DETECT response...");
-    console.log(userMessage)
+    console.log(userMessage);
     const maxSegmentLength = 500;
     let segments = [];
 
     for (let i = 0; i < userMessage.length; i += maxSegmentLength) {
-        segments.push(userMessage.substring(i, i + maxSegmentLength));
+      segments.push(userMessage.substring(i, i + maxSegmentLength));
     }
     const mergedResponse = { results: [] };
 
     // Iterate over each JSON string in the list
-    for (let i = 0; i < segments.length ; ++i) {
-        const segment = segments[i];
-        try {
-	    const response = await ollama.chat({
-		model: models.detect.modelName,
-		messages: [{ role: "user", content: segment }],
-		format: "json",
-		options: {
-		    temperature: 0,
-		}
-	    });
+    for (let i = 0; i < segments.length; ++i) {
+      const segment = segments[i];
+      try {
+        const response = await ollama.chat({
+          model: models.detect.modelName,
+          messages: [{ role: "user", content: segment }],
+          format: "json",
+          options: {
+            temperature: 0,
+          },
+        });
 
+        // Parse the JSON string into an object
+        const jsonObject = JSON.parse(response.message.content);
+        console.log(`DETECT ${i}`);
+        console.log(jsonObject);
 
-            // Parse the JSON string into an object
-            const jsonObject = JSON.parse(response.message.content);
-	    console.log(`DETECT ${i}`)
-	    console.log(jsonObject)
-
-            // Check if the object has a 'results' property and it is an array
-            if (jsonObject.results && Array.isArray(jsonObject.results)) {
-                // Merge the 'results' array into the final merged object
-                mergedResponse.results.push(...jsonObject.results);
-            }
-        } catch (error) {
-            console.error(`Error parsing JSON string: ${segment}`, error);
+        // Check if the object has a 'results' property and it is an array
+        if (jsonObject.results && Array.isArray(jsonObject.results)) {
+          // Merge the 'results' array into the final merged object
+          mergedResponse.results.push(...jsonObject.results);
         }
+      } catch (error) {
+        console.error(`Error parsing JSON string: ${segment}`, error);
+      }
     }
 
     // Deduplicate the list
     const uniqueMap = new Map();
 
-    mergedResponse.results.forEach(item => {
+    mergedResponse.results.forEach((item) => {
       if (!uniqueMap.has(item.text)) {
         uniqueMap.set(item.text, item);
       }
     });
-    mergedResponse.results = Array.from(uniqueMap.values())
+    mergedResponse.results = Array.from(uniqueMap.values());
 
     res.send({ results: JSON.stringify(mergedResponse) });
     console.log("DETECT response sent.");
-    console.log(mergedResponse)
+    console.log(mergedResponse);
   } catch (error) {
     console.error("Error running Ollama:", error);
     res
@@ -216,7 +215,8 @@ const httpsOptions = {
 };
 
 https.createServer(httpsOptions, app).listen(httpsPort, () => {
-  console.log(`HTTPS Server running at https://34.23.212.219:${httpsPort}`);
+  // console.log(`HTTPS Server running at https://34.23.212.219:${httpsPort}`);
+  console.log(`HTTPS Server running at https://localhost:${httpsPort}`);
 });
 
 app.listen(httpPort, "0.0.0.0", () => {
