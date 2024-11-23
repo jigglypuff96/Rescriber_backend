@@ -118,7 +118,7 @@ def initialize_server(test_message):
         start_time = time.time()
         results = process_request(global_base_model, system_prompts['detect'], test_message, extend_results=True)
         end_time = time.time()
-        print("Initialization complete.")
+        print("Initialization complete. Now you can start using the tool!")
         print(f"Results: {results}\nProcessing time: {end_time - start_time}")
     except Exception as e:
         print(f"Error initializing server: {str(e)}")
