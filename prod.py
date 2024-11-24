@@ -8,7 +8,7 @@ import threading
 # Flask app setup
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
-global_base_model = "llama3.2"
+global_base_model = "llama3"
 
 # System prompts
 system_prompts = {
