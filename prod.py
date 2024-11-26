@@ -59,42 +59,56 @@ def log_to_file(message):
     with open(log_file_path, "a") as log_file:
         log_file.write(f"{time.strftime('%Y-%m-%d %H:%M:%S')} - {message}\n")
 
+def split_into_chunks(input_text, chunk_size=100):
+    """Split a string into chunks of a specific size."""
+    words = input_text.split()
+    return [' '.join(words[i:i + chunk_size]) for i in range(0, len(words), chunk_size)]
 
 def get_response_stream(model_name, system_prompt, user_message):
     """Stream results from the Ollama model."""
     start_time = time.time()
-    buffer = ""
 
-    for chunk in ollama.chat(
-        model=model_name,
-        messages=[
-            {'role': 'system', 'content': system_prompt},
-            {'role': 'user', 'content': user_message}
-        ],
-        format="json",
-        stream=True,
-        options=base_options
-    ):
-        print("Chunk received:", chunk)
-        if chunk["done"]:
-            break
+    prompt_chunks = split_into_chunks(user_message)
+    results = []
+    for prompt_chunk in prompt_chunks:
+        buffer = ""
+        last_parsed_content = ""
+        for chunk in ollama.chat(
+            model=model_name,
+            messages=[
+                {'role': 'system', 'content': system_prompt},
+                {'role': 'user', 'content': prompt_chunk}
+            ],
+            format="json",
+            stream=True,
+            options=base_options
+        ):
+            print("Chunk received:", chunk)
+            if chunk["done"]:
+                try:
+                    results.extend(json.loads(last_parsed_content)["results"])
+                except json.JSONDecodeError as e:
+                    print("error in buffer: ", last_parsed_content)
+                break
 
-        content = chunk['message']['content']
-        temp_prefix = buffer + content
-        try:
-            if "]" in content or "}" in content:
-                json_str = temp_prefix[:temp_prefix.rfind("]")] + "]}" if "]" in content else temp_prefix[:temp_prefix.rfind("}")] + "}]}"
-                parsed_content = json.loads(json_str)
-                log_message = f"Result chunk: {parsed_content} (Time: {time.time() - start_time:.2f}s)"
-                print(log_message)
-                log_to_file(log_message)
-                yield f"{json.dumps(parsed_content)}\n"
-            buffer += content
-        except json.JSONDecodeError as e:
+            content = chunk['message']['content']
+            temp_prefix = buffer + content
+            try:
+                if "]" in content or "}" in content:
+                    json_str = temp_prefix[:temp_prefix.rfind("]")] + "]}" if "]" in content else temp_prefix[:temp_prefix.rfind("}")] + "}]}"
+                    last_parsed_content = json_str
+                    parsed_content = json.loads(json_str)
+                    parsed_content["results"] = results + parsed_content["results"]
+                    log_message = f"Result chunk: {parsed_content} (Time: {time.time() - start_time:.2f}s)"
+                    print(log_message)
+                    log_to_file(log_message)
+                    yield f"{json.dumps(parsed_content)}\n"
+                buffer += content
+            except json.JSONDecodeError as e:
             
-            print("JSON decode error:", e)
-            print ("content = ", content)
-            continue
+                print("JSON decode error:", e)
+                print ("content = ", content)
+                continue
 
 
 @app.route('/detect', methods=['POST'])
