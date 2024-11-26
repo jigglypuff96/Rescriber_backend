@@ -4,6 +4,7 @@ import ollama
 import json
 import time
 import threading
+from pathlib import Path
 
 # Flask app setup
 app = Flask(__name__)
@@ -50,6 +51,14 @@ system_prompts = {
 # Ollama options
 base_options = {"format": "json", "temperature": 0}
 
+# Path to the log file
+log_file_path = Path("timing.txt")
+
+def log_to_file(message):
+    """Write log message to the timing.txt file."""
+    with open(log_file_path, "a") as log_file:
+        log_file.write(f"{time.strftime('%Y-%m-%d %H:%M:%S')} - {message}\n")
+
 
 def get_response_stream(model_name, system_prompt, user_message):
     """Stream results from the Ollama model."""
@@ -76,7 +85,9 @@ def get_response_stream(model_name, system_prompt, user_message):
             if "]" in content or "}" in content:
                 json_str = temp_prefix[:temp_prefix.rfind("]")] + "]}" if "]" in content else temp_prefix[:temp_prefix.rfind("}")] + "}]}"
                 parsed_content = json.loads(json_str)
-                print(f"Result chunk: {parsed_content} (Time: {time.time() - start_time:.2f}s)")
+                log_message = f"Result chunk: {parsed_content} (Time: {time.time() - start_time:.2f}s)"
+                print(log_message)
+                log_to_file(log_message)
                 yield f"{json.dumps(parsed_content)}\n"
             buffer += content
         except json.JSONDecodeError as e:
@@ -95,6 +106,7 @@ def detect():
     if not input_text:
         return jsonify({"error": "No message provided"}), 400
 
+    log_to_file("Detect request received!")
     print("Detect request received!")
     print(f"INPUT TEXT: {input_text}")
 
@@ -112,6 +124,7 @@ def abstract():
     if not input_text:
         return jsonify({"error": "No message provided"}), 400
 
+    log_to_file("Abstract request received!")
     print("Abstract request received!")
     print(f"INPUT TEXT: {input_text}")
 
