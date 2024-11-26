@@ -43,7 +43,7 @@ system_prompts = {
     "abstract": '''Rewrite the text to abstract the protected information, without changing other parts. For example:
         Input: <Text>I graduated from CMU, and I earn a six-figure salary. Today in the office...</Text>
         <ProtectedInformation>CMU, Today</ProtectedInformation>
-        Output JSON: {"results": "I graduated from a prestigious university, and I earn a six-figure salary. Recently in the office..."} Please use "results" as the only key in the JSON object.'''
+        Output JSON: {"results": [{"protected": "CMU", "abstracted":"a prestigious university"}, {"protected": "Today", "abstracted":"Recently"}}] Please use "results" as the main key in the JSON object.'''
 }
 
 
@@ -86,42 +86,6 @@ def get_response_stream(model_name, system_prompt, user_message):
             continue
 
 
-def get_abstract_response_stream(model_name, system_prompt, user_message):
-    """Stream results from the Ollama model."""
-    start_time = time.time()
-    buffer = ""
-
-    print("Starting streaming response...")
-
-    for chunk in ollama.chat(
-        model=model_name,
-        messages=[
-            {'role': 'system', 'content': system_prompt},
-            {'role': 'user', 'content': user_message}
-        ],
-        format="json",
-        stream=True,
-        options=base_options
-    ):
-        print(f"Raw chunk received: {chunk}")
-
-        if chunk["done"]:
-            break
-
-        content = chunk['message']['content']
-        buffer += content
-
-        try:
-            if buffer.strip().endswith("}") or buffer.strip().endswith("]"):
-                parsed_content = json.loads(buffer)
-                print(f"Parsed JSON chunk: {parsed_content} (Time: {time.time() - start_time:.2f}s)")
-                yield f"{json.dumps(parsed_content)}\n"
-                buffer = ""
-        except json.JSONDecodeError as e:
-            print(f"JSON decode error: {e}")
-            continue
-
-
 @app.route('/detect', methods=['POST'])
 def detect():
     """Stream detect results to the client."""
@@ -152,7 +116,7 @@ def abstract():
     print(f"INPUT TEXT: {input_text}")
 
     return Response(
-        get_abstract_response_stream(global_base_model, system_prompts["abstract"], input_text),
+        get_response_stream(global_base_model, system_prompts["abstract"], input_text),
         content_type="application/json"
     )
 
