@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, Response, jsonify
 from flask_cors import CORS
 import ollama
 import json
@@ -28,12 +28,12 @@ system_prompts = {
   USERNAME
   
   KEYS: Passwords, passkeys, API keys, encryption keys, and any other form of security keys.
-  GEOLOCATION: Places and locations, such as cities, provinces, countries, international regions, or named infrastructures (bus stops, bridges, etc.). 
-  AFFILIATION: Names of organizations, such as public and private companies, schools, universities, public institutions, prisons, healthcare institutions, non-governmental organizations, churches, etc. 
-  DEMOGRAPHIC_ATTRIBUTE: Demographic attributes of a person, such as native language, descent, heritage, ethnicity, nationality, religious or political group, birthmarks, ages, sexual orientation, gender and sex. 
-  TIME: Description of a specific date, time, or duration. 
-  HEALTH_INFORMATION: Details concerning an individual's health status, medical conditions, treatment records, and health insurance information. 
-  FINANCIAL_INFORMATION: Financial details such as bank account numbers, credit card numbers, investment records, salary information, and other financial statuses or activities. 
+  GEOLOCATION: Places and locations, such as cities, provinces, countries, international regions, or named infrastructures (bus stops, bridges, etc.). 
+  AFFILIATION: Names of organizations, such as public and private companies, schools, universities, public institutions, prisons, healthcare institutions, non-governmental organizations, churches, etc. 
+  DEMOGRAPHIC_ATTRIBUTE: Demographic attributes of a person, such as native language, descent, heritage, ethnicity, nationality, religious or political group, birthmarks, ages, sexual orientation, gender and sex. 
+  TIME: Description of a specific date, time, or duration. 
+  HEALTH_INFORMATION: Details concerning an individual's health status, medical conditions, treatment records, and health insurance information. 
+  FINANCIAL_INFORMATION: Financial details such as bank account numbers, credit card numbers, investment records, salary information, and other financial statuses or activities. 
   EDUCATIONAL_RECORD: Educational background details, including academic records, transcripts, degrees, and certification.
     
     For the given message that a user sends to a chatbot, identify all the personally identifiable information using the above taxonomy only, and the entity_type should be selected from the all-caps categories.
@@ -46,93 +46,116 @@ system_prompts = {
         Output JSON: {"results": "I graduated from a prestigious university, and I earn a six-figure salary. Recently in the office..."} Please use "results" as the only key in the JSON object.'''
 }
 
+
 # Ollama options
 base_options = {"format": "json", "temperature": 0}
 
 
-def split_into_chunks(input_text, chunk_size=100):
-    """Split a string into chunks of a specific size."""
-    words = input_text.split()
-    return [' '.join(words[i:i + chunk_size]) for i in range(0, len(words), chunk_size)]
+def get_response_stream(model_name, system_prompt, user_message):
+    """Stream results from the Ollama model."""
+    start_time = time.time()
+    buffer = ""
 
-
-def get_response(model_name, system_prompt, user_message):
-    """Send a request to the Ollama model and return its response."""
-    response = ollama.chat(
+    for chunk in ollama.chat(
         model=model_name,
         messages=[
             {'role': 'system', 'content': system_prompt},
             {'role': 'user', 'content': user_message}
         ],
         format="json",
-        stream=False,
+        stream=True,
         options=base_options
-    )
-    return response['message']['content']
+    ):
+        print("Chunk received:", chunk)
+        if chunk["done"]:
+            break
 
-
-def process_request(model_name, prompt, input_text, extend_results=False):
-    """Process a request by sending input text in chunks to the Ollama model."""
-    chunks = split_into_chunks(input_text)
-    results = []
-
-    for chunk in chunks:
+        content = chunk['message']['content']
+        temp_prefix = buffer + content
         try:
-            message_content = get_response(model_name, prompt, chunk)
-            if not message_content.strip():
-                print("Empty message content received.")
-                continue
+            if "]" in content or "}" in content:
+                json_str = temp_prefix[:temp_prefix.rfind("]")] + "]}" if "]" in content else temp_prefix[:temp_prefix.rfind("}")] + "}]}"
+                parsed_content = json.loads(json_str)
+                print(f"Result chunk: {parsed_content} (Time: {time.time() - start_time:.2f}s)")
+                yield f"{json.dumps(parsed_content)}\n"
+            buffer += content
+        except json.JSONDecodeError as e:
+            
+            print("JSON decode error:", e)
+            print ("content = ", content)
+            continue
 
-            parsed_content = json.loads(message_content)
-            if "results" in parsed_content:
-                if extend_results:
-                    results.extend(parsed_content["results"])
-                else:
-                    results.append(parsed_content["results"])
-            else:
-                print("Unexpected response format:", parsed_content)
-        except Exception as e:
-            print(f"Error processing chunk: {chunk}\nError: {e}")
 
-    return results
+def get_abstract_response_stream(model_name, system_prompt, user_message):
+    """Stream results from the Ollama model."""
+    start_time = time.time()
+    buffer = ""
+
+    print("Starting streaming response...")
+
+    for chunk in ollama.chat(
+        model=model_name,
+        messages=[
+            {'role': 'system', 'content': system_prompt},
+            {'role': 'user', 'content': user_message}
+        ],
+        format="json",
+        stream=True,
+        options=base_options
+    ):
+        print(f"Raw chunk received: {chunk}")
+
+        if chunk["done"]:
+            break
+
+        content = chunk['message']['content']
+        buffer += content
+
+        try:
+            if buffer.strip().endswith("}") or buffer.strip().endswith("]"):
+                parsed_content = json.loads(buffer)
+                print(f"Parsed JSON chunk: {parsed_content} (Time: {time.time() - start_time:.2f}s)")
+                yield f"{json.dumps(parsed_content)}\n"
+                buffer = ""
+        except json.JSONDecodeError as e:
+            print(f"JSON decode error: {e}")
+            continue
 
 
 @app.route('/detect', methods=['POST'])
 def detect():
-    """Handle the detect endpoint."""
-    print ("Detect request received!")
-    return handle_request(global_base_model, system_prompts["detect"], extend_results=True)
-
-
-@app.route('/abstract', methods=['POST'])
-def abstract():
-    """Handle the abstract endpoint."""
-    print ("Abstract request received!")
-    response = handle_request(global_base_model, system_prompts["abstract"], extend_results=False)
-    # Flatten results and join them for consistent abstract format
-    response_data = response.json
-    if "results" in response_data:
-        response_data["results"] = ' '.join(response_data["results"])
-    return jsonify(response_data)
-
-
-def handle_request(model_name, prompt, extend_results):
-    """Handle a generic request for either 'detect' or 'abstract'."""
+    """Stream detect results to the client."""
     data = request.get_json()
     input_text = data.get('message', '')
-    print ("INPUT TEXT: ",input_text)
 
     if not input_text:
         return jsonify({"error": "No message provided"}), 400
 
-    start_time = time.time()
-    try:
-        results = process_request(model_name, prompt, input_text, extend_results)
-    except Exception as e:
-        return jsonify({"error": f"Error processing request: {str(e)}"}), 500
-    end_time = time.time()
+    print("Detect request received!")
+    print(f"INPUT TEXT: {input_text}")
 
-    return jsonify({"results": results, "processing_time": end_time - start_time})
+    return Response(
+        get_response_stream(global_base_model, system_prompts["detect"], input_text),
+        content_type="application/json"
+    )
+    
+@app.route('/abstract', methods=['POST'])
+def abstract():
+    """Stream abstract results to the client."""
+    data = request.get_json()
+    input_text = data.get('message', '')
+
+    if not input_text:
+        return jsonify({"error": "No message provided"}), 400
+
+    print("Abstract request received!")
+    print(f"INPUT TEXT: {input_text}")
+
+    return Response(
+        get_abstract_response_stream(global_base_model, system_prompts["abstract"], input_text),
+        content_type="application/json"
+    )
+
 
 
 def initialize_server(test_message):
@@ -140,10 +163,10 @@ def initialize_server(test_message):
     print("Initializing server with test message...")
     try:
         start_time = time.time()
-        results = process_request(global_base_model, system_prompts['detect'], test_message, extend_results=True)
+        results = list(get_response_stream(global_base_model, system_prompts['detect'], test_message))
         end_time = time.time()
         print("Initialization complete. Now you can start using the tool!")
-        print(f"Results: {results}\nProcessing time: {end_time - start_time}")
+        print(f"Results: {results}\nProcessing time: {end_time - start_time:.2f}s")
     except Exception as e:
         print(f"Error initializing server: {str(e)}")
 
