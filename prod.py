@@ -64,11 +64,14 @@ def split_into_chunks(input_text, chunk_size=100):
     words = input_text.split()
     return [' '.join(words[i:i + chunk_size]) for i in range(0, len(words), chunk_size)]
 
-def get_response_stream(model_name, system_prompt, user_message):
+def get_response_stream(model_name, system_prompt, user_message, chunking):
     """Stream results from the Ollama model."""
     start_time = time.time()
 
-    prompt_chunks = split_into_chunks(user_message)
+    if chunking:
+        prompt_chunks = split_into_chunks(user_message)
+    else:
+        prompt_chunks = [user_message]
     results = []
     for prompt_chunk in prompt_chunks:
         buffer = ""
@@ -125,7 +128,7 @@ def detect():
     print(f"INPUT TEXT: {input_text}")
 
     return Response(
-        get_response_stream(global_base_model, system_prompts["detect"], input_text),
+        get_response_stream(global_base_model, system_prompts["detect"], input_text, True),
         content_type="application/json"
     )
     
@@ -143,7 +146,7 @@ def abstract():
     print(f"INPUT TEXT: {input_text}")
 
     return Response(
-        get_response_stream(global_base_model, system_prompts["abstract"], input_text),
+        get_response_stream(global_base_model, system_prompts["abstract"], input_text, False),
         content_type="application/json"
     )
 
@@ -154,7 +157,7 @@ def initialize_server(test_message):
     print("Initializing server with test message...")
     try:
         start_time = time.time()
-        results = list(get_response_stream(global_base_model, system_prompts['detect'], test_message))
+        results = list(get_response_stream(global_base_model, system_prompts['detect'], test_message, True))
         end_time = time.time()
         print("Initialization complete. Now you can start using the tool!")
         print(f"Results: {results}\nProcessing time: {end_time - start_time:.2f}s")
